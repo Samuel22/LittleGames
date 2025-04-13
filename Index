@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title><Insert Name>'s Little Games</title>
+  <style>
+    body { font-family: 'Comic Sans MS', cursive; background: #eef; text-align: center; padding: 2em; }
+    canvas { border: 2px solid #000; margin-top: 1em; }
+    #menu, #gameArea { display: none; }
+    select, input, button { margin: 0.5em; }
+  </style>
+</head>
+<body>
+  <div id="start">
+    <h1>Welcome to <span id="titleName">Little Games</span>!</h1>
+    <p>Enter your name to begin:</p>
+    <input id="userName" type="text" placeholder="Your name">
+    <button onclick="startGame()">Start</button>
+  </div>
+
+  <div id="menu">
+    <h2>Let's Create Your Animal!</h2>
+    <label>Choose body color: <input type="color" id="colorPicker"></label><br>
+    <label>Choose head color: <input type="color" id="headColor"></label><br>
+    <label>Choose tail color: <input type="color" id="tailColor"></label><br>
+    <label>Choose legs color: <input type="color" id="legsColor"></label><br>
+    <label>Choose background: 
+      <select id="background">
+        <option value="#aef">Cloudy Sky</option>
+        <option value="#fea">Desert</option>
+        <option value="#afa">Forest</option>
+      </select>
+    </label><br>
+    <label>Add an effect:
+      <select id="effect">
+        <option value="none">None</option>
+        <option value="glow">Glow</option>
+        <option value="shadow">Shadow</option>
+      </select>
+    </label><br>
+    <button onclick="launchGame()">Create!</button>
+  </div>
+
+  <div id="gameArea">
+    <h2>Use arrow keys to move your animal!</h2>
+    <button onclick="startRecording()">Start Recording</button>
+    <button onclick="stopRecording()">Stop & Download</button>
+    <br><canvas id="gameCanvas" width="600" height="400"></canvas>
+  </div>
+
+  <script>
+    const bannedWords = ["poo", "pee", "fart", "butt"];
+    let animal, ctx, canvas, recording = false, recorder, chunks = [];
+
+    function startGame() {
+      const name = document.getElementById("userName").value.trim();
+      if (!name || bannedWords.some(w => name.toLowerCase().includes(w))) {
+        alert("Please enter a nice name!");
+        return;
+      }
+      document.title = `${name}'s Little Games`;
+      document.getElementById("titleName").innerText = `${name}'s Little Games`;
+      document.getElementById("start").style.display = 'none';
+      document.getElementById("menu").style.display = 'block';
+    }
+
+    function launchGame() {
+      document.getElementById("menu").style.display = 'none';
+      document.getElementById("gameArea").style.display = 'block';
+
+      canvas = document.getElementById("gameCanvas");
+      ctx = canvas.getContext("2d");
+      const bgColor = document.getElementById("background").value;
+
+      animal = {
+        x: 250, y: 150,
+        bodyColor: document.getElementById("colorPicker").value,
+        headColor: document.getElementById("headColor").value,
+        tailColor: document.getElementById("tailColor").value,
+        legsColor: document.getElementById("legsColor").value,
+        effect: document.getElementById("effect").value
+      };
+
+      document.body.style.background = bgColor;
+      drawAnimal();
+
+      window.addEventListener('keydown', moveAnimal);
+    }
+
+    function drawAnimal() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (animal.effect === 'glow') {
+        ctx.shadowColor = animal.bodyColor;
+        ctx.shadowBlur = 20;
+      } else if (animal.effect === 'shadow') {
+        ctx.shadowColor = '#555';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetX = 5;
+        ctx.shadowOffsetY = 5;
+      } else {
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+      }
+      // Draw body
+      ctx.fillStyle = animal.bodyColor;
+      ctx.beginPath();
+      ctx.arc(animal.x, animal.y, 40, 0, Math.PI * 2);
+      ctx.fill();
+      // Head
+      ctx.fillStyle = animal.headColor;
+      ctx.beginPath();
+      ctx.arc(animal.x + 40, animal.y - 30, 20, 0, Math.PI * 2);
+      ctx.fill();
+      // Tail
+      ctx.fillStyle = animal.tailColor;
+      ctx.beginPath();
+      ctx.arc(animal.x - 50, animal.y + 10, 15, 0, Math.PI * 2);
+      ctx.fill();
+      // Legs
+      ctx.fillStyle = animal.legsColor;
+      for (let i = -20; i <= 20; i += 20) {
+        ctx.fillRect(animal.x + i - 5, animal.y + 40, 10, 20);
+      }
+    }
+
+    function moveAnimal(e) {
+      const step = 10;
+      if (e.key === 'ArrowUp') animal.y -= step;
+      if (e.key === 'ArrowDown') animal.y += step;
+      if (e.key === 'ArrowLeft') animal.x -= step;
+      if (e.key === 'ArrowRight') animal.x += step;
+      drawAnimal();
+    }
+
+    function startRecording() {
+      chunks = [];
+      const stream = canvas.captureStream();
+      recorder = new MediaRecorder(stream);
+      recorder.ondataavailable = e => chunks.push(e.data);
+      recorder.onstop = downloadVideo;
+      recorder.start();
+    }
+
+    function stopRecording() {
+      if (recorder && recorder.state === 'recording') {
+        recorder.stop();
+      }
+    }
+
+    function downloadVideo() {
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const filename = prompt("What would you like to name your animal video?", "MyAnimal");
+      a.download = `${filename || 'MyAnimal'}.webm`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
